@@ -73,7 +73,6 @@ def make_border(length):
 # A helper class that overrides the base Python HTML parser.
 # This is used to scrape StupidFox.net.
 class FoxParser(HTMLParser):
-    # TODO: Document this function.
     foxurl = None
     def handle_starttag(self, tag, attrs):
         # Only parse the 'anchor' tag.
