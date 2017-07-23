@@ -240,4 +240,8 @@ async def sleep(ctx):
     exit(1)
 
 
+# =========================================================================== #
+# The final command here starts the bot. Nice and simple!
+
+
 client.run(bot_token)

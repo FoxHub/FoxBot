@@ -15,8 +15,12 @@ modify, and distribute it with attribution. See LICENSE.txt for details.
 
 ## Installation and Usage
 
-To be written.
+Make sure you have ![Python 3.6.2](https://www.python.org/downloads/) installed.
+Then, you can use pip to install the requirements from requirements.txt.
 
+```bash
+pip install -r requirements.txt
+```
 
 ## Contact
 
