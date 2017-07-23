@@ -16,8 +16,10 @@ import json
 import aiohttp
 import discord
 from discord.ext import commands
-from urllib import request
+from gtts import gTTS
 from html.parser import HTMLParser
+import os
+from urllib import request
 
 config_data = open('configs/config.json').read()
 config = json.loads(config_data)
@@ -130,7 +132,7 @@ async def cat(ctx):
 
 
 # ChangePrefix command.
-# INPUT !changeprefix
+# INPUT !changeprefix {prefix}
 # OUTPUT: The bot will begin responding to a different bot prefix.
 @client.command(pass_context = True)
 async def changeprefix(ctx):
@@ -275,9 +277,39 @@ async def ping(ctx):
 # OUTPUT: FoxBot terminates.
 @client.command(pass_context=True)
 async def sleep(ctx):
-    await client.say("*FoxBot curls up in a ball, and takes a nap. Bye!* :rainbow:")
+    await client.say("*Fox-Bot curls up in a ball, and takes a nap. Bye!* :rainbow:")
     client.close()
     exit(1)
+
+
+# Speak command
+# INPUT: !speak {words-to-speak}
+# OUTPUT: Fox-Bot will speak in the currently connected voice channel.
+@client.command(pass_context=True)
+async def speak(ctx):
+    # We need to make sure Fox-Bot is actually in a voice channel.
+    if ctx.message.server != client.get_server(server_id):
+        await client.say("*This command must be used from inside a server!*")
+        return
+    if client.is_voice_connected(ctx.message.server):
+        voice_client = client.voice_client_in(client.get_server(server_id))
+    else:
+        await client.say("*Fox-Bot isn't in a voice channel!*")
+        return
+    # Parse out the first word from the message context so that we have the rest of the line.
+    arg = ctx.message.content.replace(ctx.message.content.split()[0] + " ", '')
+    # Create the audio file from our argument
+    audiofile = "./tts.mp3"
+    tts = gTTS(text=arg, lang='en', slow=False)
+    tts.save(audiofile)
+    # And then play it.
+    player = voice_client.create_ffmpeg_player(audiofile)
+    player.volume = 0.7
+    player.start()
+    while player.is_playing():
+        # Do nothing
+        continue
+    os.unlink(audiofile)
 
 
 # StupidFox command
@@ -305,7 +337,7 @@ async def stupidfox(ctx):
             extension = ".jpg"
         imageurl = "http://stupidfox.net/art/" + imageurl + extension
         # For some reason, many of the page links on the website have duplicate dashes...
-        imageurl.replace("--", "-")
+        imageurl = imageurl.replace("--", "-")
         em = discord.Embed(title='Random stupidfox! :fox:',
                            color=728077,
                            url=foxurl)
