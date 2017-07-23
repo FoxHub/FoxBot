@@ -69,6 +69,9 @@ def make_border(length):
         str += '-'
     print(str)
 
+
+# A helper class that overrides the base Python HTML parser.
+# This is used to scrape StupidFox.net.
 class FoxParser(HTMLParser):
     # TODO: Document this function.
     foxurl = None
@@ -82,6 +85,8 @@ class FoxParser(HTMLParser):
                     self.foxurl = (attrs[0][1])
                     return
 
+# INPUT: Raw StupidFox page html
+# OUTPUT: A link to a random StupidFox page.
 def parse_fox(html):
     parser = FoxParser()
     parser.feed(html)
@@ -118,9 +123,10 @@ async def cat(ctx):
                 js = await r.json()
                 em = discord.Embed(title='Random cat! :fox:',
                                    color=728077,
-                                   thumbnail="http://random.cat/random.cat-logo.png",
                                    url=js['file'])
                 em.set_image(url=js['file'])
+                em.set_footer(text="Courtesy of Random.cat",
+                              icon_url="http://random.cat/random.cat-logo.png")
                 await client.say('<'+js['file']+'>', embed=em)
 
 
@@ -151,6 +157,7 @@ async def commands(ctx):
                "\n" + bot_prefix + "connect: I connect to your voice channel." + \
                "\n" + bot_prefix + "cuddle: I say something cute, then connect to you." + \
                "\n" + bot_prefix + "disconnect: I leave your voice channel." + \
+               "\n" + bot_prefix + "dog: I give you a random dog." + \
                "\n" + bot_prefix + "info: Trivia about me!" + \
                "\n" + bot_prefix + "lol: I call Deku's players for a LoL game." + \
                "\n" + bot_prefix + "ping: I say 'Pong!'." + \
@@ -202,6 +209,24 @@ async def disconnect(ctx):
     for x in client.voice_clients:
         if(x.server == ctx.message.server):
             return await x.disconnect()
+
+
+# Dog command.
+# INPUT: !dog
+# OUTPUT: Fox-bot uploads a random dog.
+@client.command(pass_context = True)
+async def dog(ctx):
+    async with aiohttp.ClientSession() as session:
+        async with session.get('http://random.dog/woof.json') as r:
+            if (r.status == 200):
+                js = await r.json()
+                em = discord.Embed(title='Random dog! :fox:',
+                                   color=728077,
+                                   url='http://random.dog')
+                em.set_image(url=js['url'])
+                em.set_footer(text="Courtesy of random.dog. © Aden Florian",
+                              icon_url="https://pbs.twimg.com/media/Cbg6oKqUkAI2PAB.jpg")
+                await client.say('<'+js['url']+'>', embed=em)
 
 
 # Info command.
