@@ -13,10 +13,11 @@
 # OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 import json
-
 import aiohttp
 import discord
 from discord.ext import commands
+from urllib import request
+from html.parser import HTMLParser
 
 config_data = open('configs/config.json').read()
 config = json.loads(config_data)
@@ -47,6 +48,7 @@ def get_role(target_name):
             return each.mention
     return None
 
+
 # A function so that the asynchronous 'connect' and 'cuddle' commands
 # can be more readable.
 # INPUT: The current message context.
@@ -58,6 +60,7 @@ def join_channel(ctx):
         return
     return voice_channel
 
+
 # INPUT: The length of the longest string in a block.
 # OUTPUT: A string of dashes as long as that block.
 def make_border(length):
@@ -65,6 +68,24 @@ def make_border(length):
     for num in range(length):
         str += '-'
     print(str)
+
+class FoxParser(HTMLParser):
+    # TODO: Document this function.
+    foxurl = None
+    def handle_starttag(self, tag, attrs):
+        # Only parse the 'anchor' tag.
+        if tag == "a":
+            # Check the list of defined attributes.
+            for name, value in attrs:
+                if name == "title" and value == "Random Comic":
+                    # This will pull the link out of stupidfox.net
+                    self.foxurl = (attrs[0][1])
+                    return
+
+def parse_fox(html):
+    parser = FoxParser()
+    parser.feed(html)
+    return parser.foxurl
 
 
 # =========================================================================== #
@@ -95,7 +116,7 @@ async def cat(ctx):
         async with session.get('http://random.cat/meow') as r:
             if (r.status == 200):
                 js = await r.json()
-                em = discord.Embed(title='Your random cat! :fox:',
+                em = discord.Embed(title='Random cat! :fox:',
                                    color=728077,
                                    thumbnail="http://random.cat/random.cat-logo.png",
                                    url=js['file'])
@@ -114,22 +135,8 @@ async def changeprefix(ctx):
         bot_prefix = arg[1]
         client.command_prefix = bot_prefix
         await client.say("I've changed my bot prefix to: **" + client.command_prefix + "**")
-        #break
     except IndexError:
         await client.say("*Fox-Bot looks at you confused. You must provide an argument!*")
-
-
-# ChuckNorris command.
-# INPUT: !chucknorris
-# OUTPUT: A random chuck norris joke.
-@client.command(pass_context = True)
-async def chucknorris(ctx):
-    # TODO: Document this function.
-    async with aiohttp.ClientSession() as session:
-        async with session.get("http://api.icndb.com/jokes/random") as r:
-            if (r.status == 200):
-                js = await r.json()
-                await client.say(js['value']['joke'])
 
 
 # Commands command.
@@ -138,7 +145,7 @@ async def chucknorris(ctx):
 @client.command(pass_context = True)
 async def commands(ctx):
     # TODO: Keep this command updated.
-    preamble = "My current command prefix is '" + bot_prefix + "', and my commands are:"
+    preamble = "My current command prefix is '" + client.command_prefix + "', and my commands are:"
     commands = "\n" + bot_prefix + "cat: I give you a random cute cat!" + \
                "\n" + bot_prefix + "commands: You're using me!" + \
                "\n" + bot_prefix + "connect: I connect to your voice channel." + \
@@ -147,7 +154,8 @@ async def commands(ctx):
                "\n" + bot_prefix + "info: Trivia about me!" + \
                "\n" + bot_prefix + "lol: I call Deku's players for a LoL game." + \
                "\n" + bot_prefix + "ping: I say 'Pong!'." + \
-               "\n" + bot_prefix + "sleep: Fox-Bot curls up and turns her power switch off."
+               "\n" + bot_prefix + "sleep: Fox-Bot curls up and turns her power switch off." + \
+               "\n" + bot_prefix + "stupidfox: A random stupidfox comic!."
     post = "\n\nFor any further questions, directly message the administrator."
     desc = preamble + commands + post
     embed = discord.Embed(title="Fox-bot Guide", description=desc, color=0xFFFFF)
@@ -180,7 +188,7 @@ async def cuddle(ctx):
             await client.say("*Fox-Bot is asleep in your lap. Be careful only to wake her with !disconnect.*")
             return
     if voice_channel is None:
-        await client.say("Fox-Bot can't find you!")
+        await client.say("*Fox-Bot can't find you!*")
         return
     vc = await client.join_voice_channel(voice_channel)
     await client.say("*Fox-Bot rubs against your leg and yips. :revolving_hearts:*")
@@ -201,7 +209,7 @@ async def disconnect(ctx):
 # OUTPUT: Fox-bot tells you about herself.
 @client.command(pass_context = True)
 async def info(ctx):
-    desc = "Current command prefix: " + bot_prefix
+    desc = "Current command prefix: " + client.command_prefix
     embed = discord.Embed(title="Welcome to Fox-bot.",
                           url="https://github.com/FoxHub/FoxBot",
                           description=desc,
@@ -235,7 +243,7 @@ async def lol(ctx):
 # OUTPUT: "Pong!"
 @client.command(pass_context=True)
 async def ping(ctx):
-    await client.say("Pong!", delete_after=10)
+    await client.say("Pong! *Message disappearing in 10 seconds...*", delete_after=10)
 
 
 # Sleep command
@@ -246,6 +254,44 @@ async def sleep(ctx):
     await client.say("*FoxBot curls up in a ball, and takes a nap. Bye!* :rainbow:")
     client.close()
     exit(1)
+
+
+# StupidFox command
+# INPUT: !stupidfox
+# OUTPUT: A "random" StupidFox comic.
+@client.command(pass_context = True)
+async def stupidfox(ctx):
+    html = request.urlopen("http://stupidfox.net/168-home-sweet-home")
+    foxurl = parse_fox(str(html.read()))
+    if foxurl is not None:
+        # foxurl will preserve the original url of the random web page.
+        imageurl = foxurl.split("/")[3]
+        foxnum = imageurl.split("-")[0]
+        try:
+            # Entries older than 145 on the website are in .jpg format.
+            if int(foxnum) > 145:
+                extension = ".png"
+            # And number 24 randomly truncates its name.
+            elif int(foxnum) == 24:
+                imageurl = "24"
+                extension = ".jpg"
+            else:
+                extension = ".jpg"
+        except ValueError:
+            extension = ".jpg"
+        imageurl = "http://stupidfox.net/art/" + imageurl + extension
+        # For some reason, many of the page links on the website have duplicate dashes...
+        imageurl.replace("--", "-")
+        em = discord.Embed(title='Random stupidfox! :fox:',
+                           color=728077,
+                           url=foxurl)
+        em.set_image(url=imageurl)
+        em.set_footer(text="Courtesy of Stupidfox.net. © Emily Chan",
+                         icon_url="https://scontent.fsnc1-1.fna.fbcdn.net/v/t1.0-9/14225402_10154540054369791_5558995243858647155_n.png?oh=2ea815515d0d1c7c3e4bbc561ff22f0e&oe=5A01CAD1")
+        await client.say("<" + imageurl + ">", embed=em)
+    else:
+        # StupidFox is likely down if this command fails.
+        await client.say("Yip! I can't find a URL! I'm a stupid fox. :fox:")
 
 
 # =========================================================================== #
