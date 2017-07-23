@@ -21,7 +21,7 @@ from discord.ext import commands
 config_data = open('configs/config.json').read()
 config = json.loads(config_data)
 
-# TODO: Add dice-rolling, death, random chance of foxes, update documentation
+# TODO: Add dice-rolling, death, random chance of foxes, reddit reading, update documentation
 
 # =========================================================================== #
 
@@ -146,7 +146,8 @@ async def commands(ctx):
                "\n" + bot_prefix + "disconnect: I leave your voice channel." + \
                "\n" + bot_prefix + "info: Trivia about me!" + \
                "\n" + bot_prefix + "lol: I call Deku's players for a LoL game." + \
-               "\n" + bot_prefix + "ping: I say 'Pong!'."
+               "\n" + bot_prefix + "ping: I say 'Pong!'." + \
+               "\n" + bot_prefix + "sleep: Fox-Bot curls up and turns her power switch off."
     post = "\n\nFor any further questions, directly message the administrator."
     desc = preamble + commands + post
     embed = discord.Embed(title="Fox-bot Guide", description=desc, color=0xFFFFF)
@@ -200,12 +201,20 @@ async def disconnect(ctx):
 # OUTPUT: Fox-bot tells you about herself.
 @client.command(pass_context = True)
 async def info(ctx):
-    # TODO: Pretty up this command.
-    desc = "Current command prefix: " + bot_prefix + \
-           "\nPython version: 3.6.3" + \
-           "\nAuthor: Sage Callon"
-    embed = discord.Embed(title="Hi! I'm Fox-bot.", description=desc, color=0xFFFFF)
-    return await client.say(embed=embed)
+    desc = "Current command prefix: " + bot_prefix
+    embed = discord.Embed(title="Welcome to Fox-bot.",
+                          url="https://github.com/FoxHub/FoxBot",
+                          description=desc,
+                          color=0xFFFFF)
+    embed.set_author(name="Sage Callon",
+                     url="https://github.com/FoxHub/",
+                     icon_url="https://avatars1.githubusercontent.com/u/5873865?v=4&s=40")
+    embed.set_footer(text="Licensed under the MIT license.",
+                     icon_url="https://ucarecdn.com/71946d9b-adad-4d6e-9130-0a480ddcc553/")
+    embed.add_field(name="Developed in Python.",
+                    value="An Open-Source bot in Python 3.6.2.")
+    embed.set_image(url="http://favim.com/orig/201106/02/animal-beauty-cute-fox-snow-Favim.com-63975.jpg")
+    return await client.say("<https://github.com/FoxHub/FoxBot>",embed=embed)
 
 
 # LoL command.
@@ -234,7 +243,6 @@ async def ping(ctx):
 # OUTPUT: FoxBot terminates.
 @client.command(pass_context=True)
 async def sleep(ctx):
-    # TODO: Document this function.
     await client.say("*FoxBot curls up in a ball, and takes a nap. Bye!* :rainbow:")
     client.close()
     exit(1)
