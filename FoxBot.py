@@ -14,6 +14,7 @@
 
 import json
 import aiohttp
+import asyncio
 import discord
 from discord.ext import commands
 from gtts import gTTS
@@ -39,10 +40,16 @@ server = client.get_server(server_id)
 
 # =========================================================================== #
 
-# Helper functions
-# INPUT: A role in the discord server, by its name in the role list.
-# OUTPUT: A string that allows you to @mention the role by name.
+# Helper functions in this section
+
+
 def get_role(target_name):
+    """
+    This function lets us easily ping members of a role in Discord.
+
+    :param target_name: A role in the discord server, by its name on the role list.
+    :return: A string that allows you to @mention the role by name.
+    """
     server_roles = client.get_server(server_id).roles
     for each in server_roles:
         if each.name == target_name:
@@ -51,11 +58,14 @@ def get_role(target_name):
     return None
 
 
-# A function so that the asynchronous 'connect' and 'cuddle' commands
-# can be more readable.
-# INPUT: The current message context.
-# OUTPUT: The voice channel to join.
 def join_channel(ctx):
+    """
+    This function allows the asynchronous 'connect' and 'cuddle' commands
+    to be more readable.
+
+    :param ctx: The current message context passed into the async command.
+    :return: The voice channel object to join.
+    """
     author = ctx.message.author
     voice_channel = author.voice_channel
     if voice_channel is None:
@@ -63,18 +73,25 @@ def join_channel(ctx):
     return voice_channel
 
 
-# INPUT: The length of the longest string in a block.
-# OUTPUT: A string of dashes as long as that block.
 def make_border(length):
+    """
+    A function that creates a line of dashes length long.
+
+    :param length: The length of the longest line in a block of text.
+    :return: None
+    """
     str = ''
     for num in range(length):
         str += '-'
     print(str)
 
 
-# A helper class that overrides the base Python HTML parser.
-# This is used to scrape StupidFox.net.
 class FoxParser(HTMLParser):
+    """
+    A helper class that overrides the base Python HTML parser.
+
+    This is used to screap StupidFox.net.
+    """
     foxurl = None
     def handle_starttag(self, tag, attrs):
         # Only parse the 'anchor' tag.
@@ -86,9 +103,13 @@ class FoxParser(HTMLParser):
                     self.foxurl = (attrs[0][1])
                     return
 
-# INPUT: Raw StupidFox page html
-# OUTPUT: A link to a random StupidFox page.
 def parse_fox(html):
+    """
+    This function obtains a random StupidFox page from raw HTML.
+
+    :param html: Raw StupidFox page html.
+    :return: A link to a random StupidFox page.
+    """
     parser = FoxParser()
     parser.feed(html)
     return parser.foxurl
@@ -97,9 +118,11 @@ def parse_fox(html):
 # =========================================================================== #
 
 
-# This function runs in the console whenever the bot starts up.
 @client.event
 async def on_ready():
+    """
+    The output of this function signals that Fox-Bot is up and running.
+    """
     server = client.get_server(server_id)
     msg1 = "Yip! FoxBot is running.\n"
     msg2 = "We are on the server " + server.name + "!"
@@ -113,11 +136,13 @@ async def on_ready():
 # Follows are the commands the bot accepts.
 
 
-# Cat command.
-# INPUT: !cat
-# OUTPUT: Fox-bot uploads a random cat.
 @client.command(pass_context = True)
 async def cat(ctx):
+    """
+    The Random Cat
+
+    Fox-Bot looks up and embeds a random cat from random.cat.
+    """
     async with aiohttp.ClientSession() as session:
         async with session.get('http://random.cat/meow') as r:
             if (r.status == 200):
@@ -131,12 +156,15 @@ async def cat(ctx):
                 await client.say('<'+js['file']+'>', embed=em)
 
 
-# ChangePrefix command.
-# INPUT !changeprefix {prefix}
-# OUTPUT: The bot will begin responding to a different bot prefix.
 @client.command(pass_context = True)
 async def changeprefix(ctx):
-    # TODO: Document this function.
+    """
+    Change Prefix
+
+    Fox-Bot takes the argument, and begins responding to it as a bot prefix.
+
+    Usage: {prefix}changeprefix {new-prefix}
+    """
     arg = ctx.message.content.split()
     try:
         bot_prefix = arg[1]
@@ -146,44 +174,27 @@ async def changeprefix(ctx):
         await client.say("*Fox-Bot looks at you confused. You must provide an argument!*")
 
 
-# Commands command.
-# INPUT: !commands
-# OUTPUT: Fox-bot tells you all of her commands and their syntax.
-@client.command(pass_context = True)
-async def commands(ctx):
-    # TODO: Keep this command updated.
-    preamble = "My current command prefix is '" + client.command_prefix + "', and my commands are:"
-    commands = "\n" + bot_prefix + "cat: I give you a random cute cat!" + \
-               "\n" + bot_prefix + "commands: You're using me!" + \
-               "\n" + bot_prefix + "connect: I connect to your voice channel." + \
-               "\n" + bot_prefix + "cuddle: I say something cute, then connect to you." + \
-               "\n" + bot_prefix + "disconnect: I leave your voice channel." + \
-               "\n" + bot_prefix + "dog: I give you a random dog." + \
-               "\n" + bot_prefix + "info: Trivia about me!" + \
-               "\n" + bot_prefix + "lol: I call Deku's players for a LoL game." + \
-               "\n" + bot_prefix + "ping: I say 'Pong!'." + \
-               "\n" + bot_prefix + "sleep: Fox-Bot curls up and turns her power switch off." + \
-               "\n" + bot_prefix + "stupidfox: A random stupidfox comic!."
-    post = "\n\nFor any further questions, directly message the administrator."
-    desc = preamble + commands + post
-    embed = discord.Embed(title="Fox-bot Guide", description=desc, color=0xFFFFF)
-    return await client.say(embed=embed, delete_after=10)
-
-
-# Connect command.
-# INPUT: !connect
-# OUTPUT: Fox-bot will follow you to your current voice channel.
 @client.command(pass_context=True)
 async def connect(ctx):
+    """
+    Connect to Voice Chat
+
+    Fox-Bot comes to connect to your current voice channel.
+    If she is already connected, she will remain where she is.
+    To make her follow you, see Cuddle.
+    """
     voice_channel = join_channel(ctx)
     vc = await client.join_voice_channel(voice_channel)
 
 
-# Cuddle command.
-# INPUT: !cuddle
-# OUTPUT: The bot says something cute and joins the author's voice channel.
 @client.command(pass_context=True)
 async def cuddle(ctx):
+    """
+    Cuddle
+
+    Fox-Bot says something cute, and follows you to your current
+    voice channel.
+    """
     # A repeat of the connect command, since Commands aren't callable.
     voice_channel = join_channel(ctx)
     if client.is_voice_connected(ctx.message.server):
@@ -202,21 +213,25 @@ async def cuddle(ctx):
     await client.say("*Fox-Bot rubs against your leg and yips. :revolving_hearts:*")
 
 
-# Disconnect command.
-# INPUT: !disconnect
-# OUTPUT: Fox-bot will leave your current voice channel.
 @client.command(pass_context = True)
 async def disconnect(ctx):
+    """
+    Disconnect from Voice Channel
+
+    Fox-Bot disconnects from voice chat, if connected.
+    """
     for x in client.voice_clients:
         if(x.server == ctx.message.server):
             return await x.disconnect()
 
 
-# Dog command.
-# INPUT: !dog
-# OUTPUT: Fox-bot uploads a random dog.
 @client.command(pass_context = True)
 async def dog(ctx):
+    """
+    Random Dog
+
+    Fox-Bot looks up a random dog and embeds it in Discord.
+    """
     async with aiohttp.ClientSession() as session:
         async with session.get('http://random.dog/woof.json') as r:
             if (r.status == 200):
@@ -230,11 +245,13 @@ async def dog(ctx):
                 await client.say('<'+js['url']+'>', embed=em)
 
 
-# Info command.
-# INPUT: !info
-# OUTPUT: Fox-bot tells you about herself.
 @client.command(pass_context = True)
 async def info(ctx):
+    """
+    FoxBot Info
+
+    FoxBot tells you about herself.
+    """
     desc = "Current command prefix: " + client.command_prefix
     embed = discord.Embed(title="Welcome to Fox-bot.",
                           url="https://github.com/FoxHub/FoxBot",
@@ -251,11 +268,16 @@ async def info(ctx):
     return await client.say("<https://github.com/FoxHub/FoxBot>",embed=embed)
 
 
-# LoL command.
-# INPUT: !lol
-# OUTPUT: "@Lemon :lemon: it's time for League of Legends! Yip yip!"
 @client.command(pass_context=True)
 async def lol(ctx):
+    """
+    The LoL Signal
+
+    FoxBot pings all members of the League of Legends affiliated role.
+    """
+    if ctx.message.server != client.get_server(server_id):
+        await client.say("*This command must be used from inside a server!*")
+        return
     if (ctx.message.channel != client.get_server(server_id).get_channel(league_id)):
         await client.say("Yip! This is the wrong channel for that! You're on " + ctx.message.channel.name + ".")
         return None
@@ -264,29 +286,38 @@ async def lol(ctx):
     await client.say(role + msg)
 
 
-# Ping command.
-# INPUT: !ping
-# OUTPUT: "Pong!"
 @client.command(pass_context=True)
 async def ping(ctx):
+    """
+    Ping
+
+    Fox-Bot replies with 'Pong!' and then deletes the message.
+    """
     await client.say("Pong! *Message disappearing in 10 seconds...*", delete_after=10)
 
 
-# Sleep command
-# INPUT: !sleep
-# OUTPUT: FoxBot terminates.
 @client.command(pass_context=True)
 async def sleep(ctx):
+    """
+    Sleep
+
+    Fox-Bot shuts down with a farewell message.
+    """
     await client.say("*Fox-Bot curls up in a ball, and takes a nap. Bye!* :rainbow:")
     client.close()
     exit(1)
 
 
-# Speak command
-# INPUT: !speak {words-to-speak}
-# OUTPUT: Fox-Bot will speak in the currently connected voice channel.
 @client.command(pass_context=True)
 async def speak(ctx):
+    """
+    Speak
+
+    Fox-Bot translates your words into speech and speaks in the current
+    voice channel.
+
+    Usage: {prefix}speak {words-to-speak}
+    """
     # We need to make sure Fox-Bot is actually in a voice channel.
     if ctx.message.server != client.get_server(server_id):
         await client.say("*This command must be used from inside a server!*")
@@ -308,15 +339,18 @@ async def speak(ctx):
     player.start()
     while player.is_playing():
         # Do nothing
-        continue
+        await asyncio.sleep(0.2)
+        # continue
     os.unlink(audiofile)
 
 
-# StupidFox command
-# INPUT: !stupidfox
-# OUTPUT: A "random" StupidFox comic.
 @client.command(pass_context = True)
 async def stupidfox(ctx):
+    """
+    StupidFox
+
+    Fox-Bot looks up a random StupidFox and embeds it.
+    """
     html = request.urlopen("http://stupidfox.net/168-home-sweet-home")
     foxurl = parse_fox(str(html.read()))
     if foxurl is not None:
