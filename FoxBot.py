@@ -35,8 +35,10 @@ bot_token = config['bot_token']
 server_id = config['server_id']
 league_id = config['league_id']
 client = commands.Bot(command_prefix=bot_prefix, description="A cute social bot.")
-# Initialize this variable globally; it's used often.
-server = client.get_server(server_id)
+
+# Initialize these variables globally; they're used often.
+server = None
+awake = True
 
 # =========================================================================== #
 
@@ -50,7 +52,7 @@ def get_role(target_name):
     :param target_name: A role in the discord server, by its name on the role list.
     :return: A string that allows you to @mention the role by name.
     """
-    server_roles = client.get_server(server_id).roles
+    server_roles = server.roles
     for each in server_roles:
         if each.name == target_name:
             # This is what produces our magic string.
@@ -71,6 +73,17 @@ def join_channel(ctx):
     if voice_channel is None:
         return
     return voice_channel
+
+
+def is_num(arg):
+    """
+    This function determines whether the given argument is a number.
+    """
+    try:
+        float(arg)
+        return True
+    except ValueError:
+        return False
 
 
 def make_border(length):
@@ -118,11 +131,20 @@ def parse_fox(html):
 # =========================================================================== #
 
 
+@client.check
+def is_awake(func):
+    return awake
+
+
+# =========================================================================== #
+
+
 @client.event
 async def on_ready():
     """
     The output of this function signals that Fox-Bot is up and running.
     """
+    global server
     server = client.get_server(server_id)
     msg1 = "Yip! FoxBot is running.\n"
     msg2 = "We are on the server " + server.name + "!"
@@ -198,7 +220,7 @@ async def cuddle(ctx):
     # A repeat of the connect command, since Commands aren't callable.
     voice_channel = join_channel(ctx)
     if client.is_voice_connected(ctx.message.server):
-        voice_client = client.voice_client_in(client.get_server(server_id))
+        voice_client = client.voice_client_in(server)
         if voice_client.channel != voice_channel:
             await client.say("*Fox-bot chases " + ctx.message.author.name + "!*")
             await voice_client.move_to(voice_channel)
@@ -275,10 +297,10 @@ async def lol(ctx):
 
     FoxBot pings all members of the League of Legends affiliated role.
     """
-    if ctx.message.server != client.get_server(server_id):
+    if ctx.message.server != server:
         await client.say("*This command must be used from inside a server!*")
         return
-    if (ctx.message.channel != client.get_server(server_id).get_channel(league_id)):
+    if (ctx.message.channel != server.get_channel(league_id)):
         await client.say("Yip! This is the wrong channel for that! You're on " + ctx.message.channel.name + ".")
         return None
     msg = " :lemon: it's time for League of Legends! Yip yip!"
@@ -299,13 +321,28 @@ async def ping(ctx):
 @client.command(pass_context=True)
 async def sleep(ctx):
     """
-    Sleep
+    Sleep for a few minutes.
 
     Fox-Bot shuts down with a farewell message.
+    She'll sleep for the number of minutes specified.
+
+    Usage: {prefix}sleep {minutes}
     """
-    await client.say("*Fox-Bot curls up in a ball, and takes a nap. Bye!* :rainbow:")
-    client.close()
-    exit(1)
+    # TODO: Give some sort of indicator that Fox-Bot is sleeping.
+    # TODO: Catch the exception thrown by sleep check.
+    arg = ctx.message.content.replace(ctx.message.content.split()[0] + " ", '')
+    if is_num(arg):
+        minutes = float(arg)*60 # 60 seconds per minute
+        await client.say("*Fox-Bot curls up in a ball, and takes a nap for " + arg + " minutes.* :zzz:")
+        #client.logout()
+        global awake
+        awake = False
+        await asyncio.sleep(minutes)
+        awake = True
+        #client.login()
+        await client.say("*Fox-Bot wakes up. :sunny:*")
+    else:
+        await client.say("*Argument must be a number, yip!* :fire:")
 
 
 @client.command(pass_context=True)
@@ -319,11 +356,11 @@ async def speak(ctx):
     Usage: {prefix}speak {words-to-speak}
     """
     # We need to make sure Fox-Bot is actually in a voice channel.
-    if ctx.message.server != client.get_server(server_id):
+    if ctx.message.server != server:
         await client.say("*This command must be used from inside a server!*")
         return
     if client.is_voice_connected(ctx.message.server):
-        voice_client = client.voice_client_in(client.get_server(server_id))
+        voice_client = client.voice_client_in(server)
     else:
         await client.say("*Fox-Bot isn't in a voice channel!*")
         return
