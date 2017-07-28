@@ -1,6 +1,6 @@
 {
   "bot_prefix" : "!",
   "bot_token" : "You wish!",
-  "server_id" : "your-server-id",
-  "league_id" : "your-lol-channel-id"
+  "league_id" : "your-lol-channel-id",
+  "whitelist" : ["Admin#1234", "Mod#9999"]
 }

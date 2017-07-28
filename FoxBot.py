@@ -12,40 +12,48 @@
 # COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
 # OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-import json
 import aiohttp
 import asyncio
 import discord
 from discord.ext import commands
+from discord.ext.commands.bot import _get_variable
 from gtts import gTTS
 from html.parser import HTMLParser
+import json
 import os
 from urllib import request
 
 config_data = open('configs/config.json').read()
 config = json.loads(config_data)
 
-# TODO: Add dice-rolling, death, random chance of foxes, reddit reading, update documentation
+# TODO:
+''' 
+    o Add dice-rolling
+    o random chance of foxes on message
+    o subreddit reading
+    o update documentation
+    o make better exclusive and awake checks - I think I can access the bot's 
+        current status instead of using a global somehow...
+'''
 
 # =========================================================================== #
 
-Client = discord.Client()
 bot_prefix = config['bot_prefix']
 bot_token = config['bot_token']
-server_id = config['server_id']
 league_id = config['league_id']
+whitelist = config['whitelist']
 client = commands.Bot(command_prefix=bot_prefix, description="A cute social bot.")
 
 # Initialize these variables globally; they're used often.
-server = None
 awake = True
+exclusive = True
 
 # =========================================================================== #
 
 # Helper functions in this section
 
 
-def get_role(target_name):
+def get_role(target_name, server):
     """
     This function lets us easily ping members of a role in Discord.
 
@@ -128,13 +136,29 @@ def parse_fox(html):
     return parser.foxurl
 
 
-# =========================================================================== #
+async def perms_check(ctx):
+    """
+    A function that checks if a Discord user is in Fox-Bot's whitelist.
 
+    :param ctx: The context of the message.
+    :return: true or false
+    """
+    if str(ctx.message.author) in whitelist:
+        return True
+    else:
+        await client.say("*You're not permitted to do this command. Exclusive mode is on!*")
+        return False
+    
+
+# =========================================================================== #
 
 @client.check
 def is_awake(func):
+    """
+    This function runs before every message. If it returns false, the message
+    will fail.
+    """
     return awake
-
 
 # =========================================================================== #
 
@@ -144,14 +168,13 @@ async def on_ready():
     """
     The output of this function signals that Fox-Bot is up and running.
     """
-    global server
-    server = client.get_server(server_id)
-    msg1 = "Yip! FoxBot is running.\n"
-    msg2 = "We are on the server " + server.name + "!"
-    make_border(len(msg2))
-    print(msg1 + msg2)
-    make_border(len(msg2))
     await client.change_presence(game=discord.Game(name='with Humans'))
+    msg1 = "Yip! Fox-Bot is running as {}.\n".format(client.user.name)
+    msg2 = "Our id is {}.\n".format(client.user.id)
+    msg3 = "Invite link: https://discordapp.com/oauth2/authorize?client_id={}&scope=bot".format(client.user.id)
+    make_border(len(msg3))
+    print(msg1 + msg2 + msg3)
+    make_border(len(msg3))
 
 
 # =========================================================================== #
@@ -167,7 +190,7 @@ async def cat(ctx):
     """
     async with aiohttp.ClientSession() as session:
         async with session.get('http://random.cat/meow') as r:
-            if (r.status == 200):
+            if r.status == 200:
                 js = await r.json()
                 em = discord.Embed(title='Random cat! :fox:',
                                    color=728077,
@@ -204,9 +227,17 @@ async def connect(ctx):
     Fox-Bot comes to connect to your current voice channel.
     If she is already connected, she will remain where she is.
     To make her follow you, see Cuddle.
+
+    If exclusive mode is on, you must be on Fox-Bot's whitelist
+    to use this command.
     """
+    # TODO: Deal with command over direct message
+    global exclusive
+    if exclusive:
+        if not await perms_check(ctx):
+            return
     voice_channel = join_channel(ctx)
-    vc = await client.join_voice_channel(voice_channel)
+    await client.join_voice_channel(voice_channel)
 
 
 @client.command(pass_context=True)
@@ -217,9 +248,15 @@ async def cuddle(ctx):
     Fox-Bot says something cute, and follows you to your current
     voice channel.
     """
+    # TODO: Deal with command over direct message
     # A repeat of the connect command, since Commands aren't callable.
+    global exclusive
+    if exclusive:
+        if not await perms_check(ctx):
+            return
     voice_channel = join_channel(ctx)
-    if client.is_voice_connected(ctx.message.server):
+    server = ctx.message.server
+    if client.is_voice_connected(server):
         voice_client = client.voice_client_in(server)
         if voice_client.channel != voice_channel:
             await client.say("*Fox-bot chases " + ctx.message.author.name + "!*")
@@ -231,7 +268,7 @@ async def cuddle(ctx):
     if voice_channel is None:
         await client.say("*Fox-Bot can't find you!*")
         return
-    vc = await client.join_voice_channel(voice_channel)
+    await client.join_voice_channel(voice_channel)
     await client.say("*Fox-Bot rubs against your leg and yips. :revolving_hearts:*")
 
 
@@ -241,9 +278,16 @@ async def disconnect(ctx):
     Disconnect from Voice Channel
 
     Fox-Bot disconnects from voice chat, if connected.
+
+    If exclusive mode is on, you must be on Fox-Bot's whitelist
+    to use this command.
     """
+    global exclusive
+    if exclusive:
+        if not await perms_check(ctx):
+            return
     for x in client.voice_clients:
-        if(x.server == ctx.message.server):
+        if x.server == ctx.message.server:
             return await x.disconnect()
 
 
@@ -265,6 +309,22 @@ async def dog(ctx):
                 em.set_footer(text="Courtesy of random.dog. © Aden Florian",
                               icon_url="https://pbs.twimg.com/media/Cbg6oKqUkAI2PAB.jpg")
                 await client.say('<'+js['url']+'>', embed=em)
+
+
+@client.command(pass_context = True)
+async def exclusive(ctx):
+    """
+    Toggle Permissions checking
+
+    After entering exclusive mode, FoxBot will check permissions
+    before executing some of her more 'abusable' commands.
+
+    This is only usable by members on FoxBot's whitelist.
+    """
+    if await perms_check(ctx):
+        global exclusive
+        exclusive = not exclusive
+        await client.say("*Exclusive mode toggled to {}.*".format(exclusive))
 
 
 @client.command(pass_context = True)
@@ -296,16 +356,47 @@ async def lol(ctx):
     The LoL Signal
 
     FoxBot pings all members of the League of Legends affiliated role.
+    This command works only on one channel, set by the bot's administrator.
     """
-    if ctx.message.server != server:
+    server = ctx.message.server
+    if server is None:
         await client.say("*This command must be used from inside a server!*")
         return
-    if (ctx.message.channel != server.get_channel(league_id)):
+    if ctx.message.channel != server.get_channel(league_id):
         await client.say("Yip! This is the wrong channel for that! You're on " + ctx.message.channel.name + ".")
         return None
     msg = " :lemon: it's time for League of Legends! Yip yip!"
-    role = get_role("Lemon")
+    role = get_role("Lemon", ctx.message.server)
     await client.say(role + msg)
+
+
+@client.command(pass_context=True)
+async def nap(ctx):
+    """
+    Nap for a few minutes.
+
+    She'll become unresponsive for the number of minutes specified.
+
+    Usage: {prefix}nap {minutes}
+    """
+    global exclusive
+    if exclusive:
+        if not await perms_check(ctx):
+            return
+    arg = ctx.message.content.replace(ctx.message.content.split()[0] + " ", '')
+    if is_num(arg):
+        # TODO: Set bot to away when she is napping.
+        minutes = float(arg)*60  # 60 seconds per minute
+        global awake
+        # Flipping this boolean causes all commands to fail until the bot wakes up.
+        awake = False
+        await client.say("*Fox-Bot curls up in a ball, and takes a nap for " + arg + " minutes.* :zzz:")
+        # After sleeping, we undo the previous operations.
+        await asyncio.sleep(minutes)
+        awake = True
+        await client.say("*Fox-Bot wakes up. :sunny:*")
+    else:
+        await client.say("*Argument must be a number, yip!* :fire:")
 
 
 @client.command(pass_context=True)
@@ -321,28 +412,24 @@ async def ping(ctx):
 @client.command(pass_context=True)
 async def sleep(ctx):
     """
-    Sleep for a few minutes.
+    Shut down Fox-Bot.
 
-    Fox-Bot shuts down with a farewell message.
-    She'll sleep for the number of minutes specified.
-
-    Usage: {prefix}sleep {minutes}
+    Fox-bot will shut down with a farewell message.
+    WARNING: Using this command takes Fox-Bot offline until restarted.
     """
-    # TODO: Give some sort of indicator that Fox-Bot is sleeping.
-    # TODO: Catch the exception thrown by sleep check.
-    arg = ctx.message.content.replace(ctx.message.content.split()[0] + " ", '')
-    if is_num(arg):
-        minutes = float(arg)*60 # 60 seconds per minute
-        await client.say("*Fox-Bot curls up in a ball, and takes a nap for " + arg + " minutes.* :zzz:")
-        #client.logout()
-        global awake
-        awake = False
-        await asyncio.sleep(minutes)
-        awake = True
-        #client.login()
-        await client.say("*Fox-Bot wakes up. :sunny:*")
-    else:
-        await client.say("*Argument must be a number, yip!* :fire:")
+    global exclusive
+    if exclusive:
+        if not await perms_check(ctx):
+            return
+    await client.say("*Fox-Bot curls up, and goes into a deep slumber.* :zzz:")
+    # Closes the bot.
+    loop = client.loop
+    await client.close()
+    await loop.stop()
+    pending = asyncio.Task.all_tasks()
+    await loop.run_until_complete(asyncio.gather(*pending))
+    client.close()
+    raise SystemExit
 
 
 @client.command(pass_context=True)
@@ -351,15 +438,21 @@ async def speak(ctx):
     Speak
 
     Fox-Bot translates your words into speech and speaks in the current
-    voice channel.
+    voice channel. Only permitted users may use this command if exclusive
+    mode is on.
 
     Usage: {prefix}speak {words-to-speak}
     """
     # We need to make sure Fox-Bot is actually in a voice channel.
-    if ctx.message.server != server:
+    global exclusive
+    if exclusive:
+        if not await perms_check(ctx):
+            return
+    server = ctx.message.server
+    if server is None:
         await client.say("*This command must be used from inside a server!*")
         return
-    if client.is_voice_connected(ctx.message.server):
+    if client.is_voice_connected(server):
         voice_client = client.voice_client_in(server)
     else:
         await client.say("*Fox-Bot isn't in a voice channel!*")
@@ -372,7 +465,6 @@ async def speak(ctx):
     tts.save(audiofile)
     # And then play it.
     player = voice_client.create_ffmpeg_player(audiofile)
-    player.volume = 0.7
     player.start()
     while player.is_playing():
         # Do nothing
