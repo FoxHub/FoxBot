@@ -25,5 +25,9 @@ pip install -r requirements.txt
 For the !speak command to work, you'll also need to install [FFmpeg](http://FFmpeg.org) and
 add it to your PATH.
 
+Finally, Fox-Bot's `config.json-EXAMPLE` must be renamed to `config.json` and filled with real
+production data.
+
 ## Contact
 
+Questions about using this program can be e-mailed to sagecallon@gmail.com.

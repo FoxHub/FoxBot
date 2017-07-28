@@ -12,16 +12,16 @@
 # COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
 # OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-import aiohttp
 import asyncio
-import discord
-from discord.ext import commands
-from discord.ext.commands.bot import _get_variable
-from gtts import gTTS
-from html.parser import HTMLParser
 import json
 import os
+from html.parser import HTMLParser
 from urllib import request
+
+import aiohttp
+import discord
+from discord.ext import commands
+from gtts import gTTS
 
 config_data = open('configs/config.json').read()
 config = json.loads(config_data)
