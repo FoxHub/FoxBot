@@ -22,7 +22,7 @@ Then, you can use pip to install the requirements from requirements.txt.
 pip install -r requirements.txt
 ```
 
-For the !speak command to work, you'll also need to install [FFmpeg](http://FFmpeg.org) and
+For the `!speak` command to work, you'll also need to install [FFmpeg](http://FFmpeg.org) and
 add it to your PATH.
 
 Finally, Fox-Bot's `config.json-EXAMPLE` must be renamed to `config.json` and filled with real

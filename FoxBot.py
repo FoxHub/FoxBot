@@ -28,7 +28,6 @@ config = json.loads(config_data)
 
 # TODO:
 ''' 
-    o Add dice-rolling
     o random chance of foxes on message
     o subreddit reading
     o update documentation
@@ -49,6 +48,27 @@ awake = True
 exclusive = True
 
 # =========================================================================== #
+
+# Helper classes in this section
+
+
+class FoxParser(HTMLParser):
+    """
+    A helper class that overrides the base Python HTML parser.
+
+    This is used to scrape StupidFox.net.
+    """
+    foxurl = None
+    def handle_starttag(self, tag, attrs):
+        # Only parse the 'anchor' tag.
+        if tag == "a":
+            # Check the list of defined attributes.
+            for name, value in attrs:
+                if name == "title" and value == "Random Comic":
+                    # This will pull the link out of stupidfox.net
+                    self.foxurl = (attrs[0][1])
+                    return
+
 
 # Helper functions in this section
 
@@ -106,23 +126,6 @@ def make_border(length):
         str += '-'
     print(str)
 
-
-class FoxParser(HTMLParser):
-    """
-    A helper class that overrides the base Python HTML parser.
-
-    This is used to screap StupidFox.net.
-    """
-    foxurl = None
-    def handle_starttag(self, tag, attrs):
-        # Only parse the 'anchor' tag.
-        if tag == "a":
-            # Check the list of defined attributes.
-            for name, value in attrs:
-                if name == "title" and value == "Random Comic":
-                    # This will pull the link out of stupidfox.net
-                    self.foxurl = (attrs[0][1])
-                    return
 
 def parse_fox(html):
     """
@@ -272,7 +275,7 @@ async def cuddle(ctx):
     await client.say("*Fox-Bot rubs against your leg and yips. :revolving_hearts:*")
 
 
-@client.command(pass_context = True)
+@client.command(pass_context=True)
 async def disconnect(ctx):
     """
     Disconnect from Voice Channel
@@ -291,7 +294,7 @@ async def disconnect(ctx):
             return await x.disconnect()
 
 
-@client.command(pass_context = True)
+@client.command(pass_context=True)
 async def dog(ctx):
     """
     Random Dog
@@ -311,7 +314,7 @@ async def dog(ctx):
                 await client.say('<'+js['url']+'>', embed=em)
 
 
-@client.command(pass_context = True)
+@client.command(pass_context=True)
 async def exclusive(ctx):
     """
     Toggle Permissions checking
@@ -327,7 +330,7 @@ async def exclusive(ctx):
         await client.say("*Exclusive mode toggled to {}.*".format(exclusive))
 
 
-@client.command(pass_context = True)
+@client.command(pass_context=True)
 async def info(ctx):
     """
     FoxBot Info
@@ -473,7 +476,7 @@ async def speak(ctx):
     os.unlink(audiofile)
 
 
-@client.command(pass_context = True)
+@client.command(pass_context=True)
 async def stupidfox(ctx):
     """
     StupidFox
