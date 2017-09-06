@@ -235,7 +235,7 @@ async def changechances(ctx):
         fox_chance = float(ctx.message.content.split()[1][:-1])
         await client.say("Yip! My chance of making random foxes is now {}%.".format(fox_chance))
     except ValueError:
-        await client.say("Yip! Give me a decimal or floating point number!")
+        await client.say("Yip! Give me a base 10 integer or floating point number!")
 
 
 @client.command(pass_context = True)
