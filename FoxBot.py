@@ -16,6 +16,7 @@ import asyncio
 import json
 import os
 from html.parser import HTMLParser
+from random import randrange
 from urllib import request
 
 import aiohttp
@@ -28,7 +29,6 @@ config = json.loads(config_data)
 
 # TODO:
 ''' 
-    o random chance of foxes on message
     o subreddit reading
     o update documentation
     o make better exclusive and awake checks - I think I can access the bot's 
@@ -39,6 +39,7 @@ config = json.loads(config_data)
 
 bot_prefix = config['bot_prefix']
 bot_token = config['bot_token']
+fox_chance = float(config['fox_chance'][:-1])
 league_id = config['league_id']
 whitelist = config['whitelist']
 client = commands.Bot(command_prefix=bot_prefix, description="A cute social bot.")
@@ -180,6 +181,21 @@ async def on_ready():
     make_border(len(msg3))
 
 
+@client.event
+async def on_message(message):
+    """
+    This function defines what our bot does each time a message is posted in a channel.
+
+    In this case, she just has a random chance of responding to any given message with a fox.
+    Then she processes commands normally.
+    """
+    if fox_chance != 0:
+        if randrange(0, 100) < fox_chance:
+            await client.add_reaction(message, "\U0001F98A")
+    # This call is necessary for our bot to still process commands normally.
+    await client.process_commands(message)
+
+
 # =========================================================================== #
 # Follows are the commands the bot accepts.
 
@@ -202,6 +218,24 @@ async def cat(ctx):
                 em.set_footer(text="Courtesy of Random.cat",
                               icon_url="http://random.cat/random.cat-logo.png")
                 await client.say('<'+js['file']+'>', embed=em)
+
+
+@client.command(pass_context = True)
+async def changechances(ctx):
+    """
+    Change the chance of random foxes
+
+    Fox-bot takes the argument, and treats it as the new chance that she will respond to messages with a fox.
+    Caution, because some users may find this extremely annoying.
+
+    Usage: {prefix}changechances {}
+    """
+    global fox_chance
+    try:
+        fox_chance = float(ctx.message.content.split()[1][:-1])
+        await client.say("Yip! My chance of making random foxes is now {}%.".format(fox_chance))
+    except ValueError:
+        await client.say("Yip! Give me a decimal or floating point number!")
 
 
 @client.command(pass_context = True)
