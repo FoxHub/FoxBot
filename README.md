@@ -2,7 +2,7 @@
 
 [![Software License](https://img.shields.io/badge/license-MIT-brightgreen.svg)](http://opensource.org/licenses/MIT)
 
-(c) 2017 Sage Callon.
+(c) 2017~2018 Sage Callon.
 
 FoxBot is a personable and entertaining social boat for Discord, written
 in Python 3.6.2. I designed it for personal purposes, but it should be
@@ -23,7 +23,7 @@ pip install -r requirements.txt
 ```
 
 For the `!speak` command to work, you'll also need to install [FFmpeg](http://FFmpeg.org) and
-add it to your PATH.
+add it to your PATH, as well as set up an AWS account for use through the command line for Polly.
 
 Finally, Fox-Bot's `config.json-EXAMPLE` must be renamed to `config.json` and filled with real
 production data.

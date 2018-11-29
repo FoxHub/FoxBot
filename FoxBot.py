@@ -22,7 +22,7 @@ from urllib import request
 import aiohttp
 import discord
 from discord.ext import commands
-from gtts import gTTS
+from PollyHelpers import tts
 
 config_data = open('configs/config.json').read()
 config = json.loads(config_data)
@@ -228,7 +228,7 @@ async def changechances(ctx):
     Fox-bot takes the argument, and treats it as the new chance that she will respond to messages with a fox.
     Caution, because some users may find this extremely annoying.
 
-    Usage: {prefix}changechances {}
+    Usage: {prefix}changechances {number}%
     """
     global fox_chance
     try:
@@ -495,11 +495,10 @@ async def speak(ctx):
         await client.say("*Fox-Bot isn't in a voice channel!*")
         return
     # Parse out the first word from the message context so that we have the rest of the line.
-    arg = ctx.message.content.replace(ctx.message.content.split()[0] + " ", '')
+    text = ctx.message.content.replace(ctx.message.content.split()[0] + " ", '')
     # Create the audio file from our argument
-    audiofile = "./tts.mp3"
-    tts = gTTS(text=arg, lang='en', slow=False)
-    tts.save(audiofile)
+    audiofile = "./tts.wav"
+    tts(text, audiofile)
     # And then play it.
     player = voice_client.create_ffmpeg_player(audiofile)
     player.start()

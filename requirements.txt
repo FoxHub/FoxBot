@@ -1,4 +1,5 @@
 aiohttp
 discord.py
-gtts
+boto3
 pynacl
+git+https://github.com/DeepHorizons/tts
