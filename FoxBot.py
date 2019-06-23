@@ -21,7 +21,9 @@ from urllib import request
 
 import aiohttp
 import discord
+from discord import FFmpegPCMAudio
 from discord.ext import commands
+from discord.utils import get
 from PollyHelpers import tts
 
 config_data = open('configs/config.json').read()
@@ -98,7 +100,7 @@ def join_channel(ctx):
     :return: The voice channel object to join.
     """
     author = ctx.message.author
-    voice_channel = author.voice_channel
+    voice_channel = author.voice.channel
     if voice_channel is None:
         return
     return voice_channel
@@ -172,7 +174,7 @@ async def on_ready():
     """
     The output of this function signals that Fox-Bot is up and running.
     """
-    await client.change_presence(game=discord.Game(name='with Humans'))
+    await client.change_presence(activity=discord.Game(name='with Humans'))
     msg1 = "Yip! Fox-Bot is running as {}.\n".format(client.user.name)
     msg2 = "Our id is {}.\n".format(client.user.id)
     msg3 = "Invite link: https://discordapp.com/oauth2/authorize?client_id={}&scope=bot".format(client.user.id)
@@ -207,17 +209,7 @@ async def cat(ctx):
 
     Fox-Bot looks up and embeds a random cat from random.cat.
     """
-    async with aiohttp.ClientSession() as session:
-        async with session.get('http://random.cat/meow') as r:
-            if r.status == 200:
-                js = await r.json()
-                em = discord.Embed(title='Random cat! :fox:',
-                                   color=728077,
-                                   url=js['file'])
-                em.set_image(url=js['file'])
-                em.set_footer(text="Courtesy of Random.cat",
-                              icon_url="http://random.cat/random.cat-logo.png")
-                await client.say('<'+js['file']+'>', embed=em)
+    await ctx.send("Random.cat has been taken down. Unfortunately, this function is deprecated. :fox:")
 
 
 @client.command(pass_context = True)
@@ -233,9 +225,9 @@ async def changechances(ctx):
     global fox_chance
     try:
         fox_chance = float(ctx.message.content.split()[1][:-1])
-        await client.say("Yip! My chance of making random foxes is now {}%.".format(fox_chance))
+        await ctx.send("Yip! My chance of making random foxes is now {}%.".format(fox_chance))
     except ValueError:
-        await client.say("Yip! Give me a base 10 integer or floating point number!")
+        await ctx.send("Yip! Give me a floating point number!")
 
 
 @client.command(pass_context = True)
@@ -251,9 +243,9 @@ async def changeprefix(ctx):
     try:
         bot_prefix = arg[1]
         client.command_prefix = bot_prefix
-        await client.say("I've changed my bot prefix to: **" + client.command_prefix + "**")
+        await ctx.send("I've changed my bot prefix to: **" + client.command_prefix + "**")
     except IndexError:
-        await client.say("*Fox-Bot looks at you confused. You must provide an argument!*")
+        await ctx.send("*Fox-Bot looks at you confused. You must provide an argument!*")
 
 
 @client.command(pass_context=True)
@@ -273,8 +265,12 @@ async def connect(ctx):
     if exclusive:
         if not await perms_check(ctx):
             return
-    voice_channel = join_channel(ctx)
-    await client.join_voice_channel(voice_channel)
+    channel = join_channel(ctx)
+    voice = get(client.voice_clients, guild=ctx.guild)
+    if voice and voice.is_connected():
+        await voice.move_to(channel)
+    else:
+        await channel.connect()
 
 
 @client.command(pass_context=True)
@@ -291,22 +287,22 @@ async def cuddle(ctx):
     if exclusive:
         if not await perms_check(ctx):
             return
-    voice_channel = join_channel(ctx)
-    server = ctx.message.server
-    if client.is_voice_connected(server):
-        voice_client = client.voice_client_in(server)
-        if voice_client.channel != voice_channel:
-            await client.say("*Fox-bot chases " + ctx.message.author.name + "!*")
-            await voice_client.move_to(voice_channel)
+    channel = join_channel(ctx)
+    if channel is None:
+        await ctx.send("*Fox-Bot can't find you!*")
+        return
+    voice = get(client.voice_clients, guild=ctx.guild)
+    if voice and voice.is_connected():
+        if voice.channel != channel:
+            await ctx.send("*Fox-bot chases " + ctx.message.author.name + "!*")
+            await voice.move_to(channel)
             return
         else:
-            await client.say("*Fox-Bot is asleep in your lap. Be careful only to wake her with !disconnect.*")
+            await ctx.send("*Fox-Bot is asleep in your lap. Be careful only to wake her with !disconnect.*")
             return
-    if voice_channel is None:
-        await client.say("*Fox-Bot can't find you!*")
-        return
-    await client.join_voice_channel(voice_channel)
-    await client.say("*Fox-Bot rubs against your leg and yips. :revolving_hearts:*")
+    else:
+        await ctx.send("*Fox-Bot rubs against your leg and yips. :revolving_hearts:*")
+        await channel.connect()
 
 
 @client.command(pass_context=True)
@@ -324,7 +320,7 @@ async def disconnect(ctx):
         if not await perms_check(ctx):
             return
     for x in client.voice_clients:
-        if x.server == ctx.message.server:
+        if x.guild == ctx.message.guild:
             return await x.disconnect()
 
 
@@ -345,7 +341,7 @@ async def dog(ctx):
                 em.set_image(url=js['url'])
                 em.set_footer(text="Courtesy of random.dog. © Aden Florian",
                               icon_url="https://pbs.twimg.com/media/Cbg6oKqUkAI2PAB.jpg")
-                await client.say('<'+js['url']+'>', embed=em)
+                await ctx.send('<'+js['url']+'>', embed=em)
 
 
 @client.command(pass_context=True)
@@ -361,7 +357,7 @@ async def exclusive(ctx):
     if await perms_check(ctx):
         global exclusive
         exclusive = not exclusive
-        await client.say("*Exclusive mode toggled to {}.*".format(exclusive))
+        await ctx.send("*Exclusive mode toggled to {}.*".format(exclusive))
 
 
 @client.command(pass_context=True)
@@ -384,27 +380,7 @@ async def info(ctx):
     embed.add_field(name="Developed in Python.",
                     value="An Open-Source bot in Python 3.6.2.")
     embed.set_image(url="http://favim.com/orig/201106/02/animal-beauty-cute-fox-snow-Favim.com-63975.jpg")
-    return await client.say("<https://github.com/FoxHub/FoxBot>",embed=embed)
-
-
-@client.command(pass_context=True)
-async def lol(ctx):
-    """
-    The LoL Signal
-
-    FoxBot pings all members of the League of Legends affiliated role.
-    This command works only on one channel, set by the bot's administrator.
-    """
-    server = ctx.message.server
-    if server is None:
-        await client.say("*This command must be used from inside a server!*")
-        return
-    if ctx.message.channel != server.get_channel(league_id):
-        await client.say("Yip! This is the wrong channel for that! You're on " + ctx.message.channel.name + ".")
-        return None
-    msg = " :lemon: it's time for League of Legends! Yip yip!"
-    role = get_role("Lemon", ctx.message.server)
-    await client.say(role + msg)
+    return await ctx.send("<https://github.com/FoxHub/FoxBot>",embed=embed)
 
 
 @client.command(pass_context=True)
@@ -427,13 +403,13 @@ async def nap(ctx):
         global awake
         # Flipping this boolean causes all commands to fail until the bot wakes up.
         awake = False
-        await client.say("*Fox-Bot curls up in a ball, and takes a nap for " + arg + " minutes.* :zzz:")
+        await ctx.send("*Fox-Bot curls up in a ball, and takes a nap for " + arg + " minutes.* :zzz:")
         # After sleeping, we undo the previous operations.
         await asyncio.sleep(minutes)
         awake = True
-        await client.say("*Fox-Bot wakes up. :sunny:*")
+        await ctx.send("*Fox-Bot wakes up. :sunny:*")
     else:
-        await client.say("*Argument must be a number, yip!* :fire:")
+        await ctx.send("*Argument must be a number, yip!* :fire:")
 
 
 @client.command(pass_context=True)
@@ -443,7 +419,7 @@ async def ping(ctx):
 
     Fox-Bot replies with 'Pong!' and then deletes the message.
     """
-    await client.say("Pong! *Message disappearing in 10 seconds...*", delete_after=10)
+    await ctx.send("Pong! *Message disappearing in 10 seconds...*", delete_after=10)
 
 
 @client.command(pass_context=True)
@@ -458,7 +434,7 @@ async def sleep(ctx):
     if exclusive:
         if not await perms_check(ctx):
             return
-    await client.say("*Fox-Bot curls up, and goes into a deep slumber.* :zzz:")
+    await ctx.send("*Fox-Bot curls up, and goes into a deep slumber.* :zzz:")
     # Closes the bot.
     loop = client.loop
     await client.close()
@@ -485,28 +461,28 @@ async def speak(ctx):
     if exclusive:
         if not await perms_check(ctx):
             return
-    server = ctx.message.server
+    server = ctx.message.guild
     if server is None:
         await client.say("*This command must be used from inside a server!*")
         return
-    if client.is_voice_connected(server):
-        voice_client = client.voice_client_in(server)
+    voice = get(client.voice_clients, guild=ctx.guild)
+    if voice and voice.is_connected():
+        # Parse out the first word from the message context so that we have the rest of the line.
+        text = ctx.message.content.replace(ctx.message.content.split()[0] + " ", '')
+        # Create the audio file from our argument
+        audiofile = "./tts.wav"
+        tts(text, audiofile)
+        source = FFmpegPCMAudio(audiofile, executable='ffmpeg')
+        # And then play it.
+        voice.play(source)
+        while voice.is_playing():
+            # Do nothing
+            await asyncio.sleep(0.2)
+            # continue
+        os.unlink(audiofile)
     else:
         await client.say("*Fox-Bot isn't in a voice channel!*")
         return
-    # Parse out the first word from the message context so that we have the rest of the line.
-    text = ctx.message.content.replace(ctx.message.content.split()[0] + " ", '')
-    # Create the audio file from our argument
-    audiofile = "./tts.wav"
-    tts(text, audiofile)
-    # And then play it.
-    player = voice_client.create_ffmpeg_player(audiofile)
-    player.start()
-    while player.is_playing():
-        # Do nothing
-        await asyncio.sleep(0.2)
-        # continue
-    os.unlink(audiofile)
 
 
 @client.command(pass_context=True)
@@ -543,10 +519,10 @@ async def stupidfox(ctx):
         em.set_image(url=imageurl)
         em.set_footer(text="Courtesy of Stupidfox.net. © Emily Chan",
                          icon_url="https://scontent.fsnc1-1.fna.fbcdn.net/v/t1.0-9/14225402_10154540054369791_5558995243858647155_n.png?oh=2ea815515d0d1c7c3e4bbc561ff22f0e&oe=5A01CAD1")
-        await client.say("<" + imageurl + ">", embed=em)
+        await ctx.send("<" + imageurl + ">", embed=em)
     else:
         # StupidFox is likely down if this command fails.
-        await client.say("Yip! I can't find a URL! I'm a stupid fox. :fox:")
+        await ctx.send("Yip! I can't find a URL! I'm a stupid fox. :fox:")
 
 
 # =========================================================================== #
