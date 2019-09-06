@@ -152,7 +152,7 @@ async def perms_check(ctx):
     if str(ctx.message.author) in whitelist:
         return True
     else:
-        await client.say("*You're not permitted to do this command. Exclusive mode is on!*")
+        await ctx.send("*You're not permitted to do this command. Exclusive mode is on!*")
         return False
     
 
@@ -193,7 +193,7 @@ async def on_message(message):
     """
     if fox_chance != 0:
         if randrange(0, 100) < fox_chance:
-            await client.add_reaction(message, "\U0001F98A")
+            await message.add_reaction("\U0001F98A")
     # This call is necessary for our bot to still process commands normally.
     await client.process_commands(message)
 
