@@ -4,20 +4,20 @@
 
 import boto3
 
-defaultRegion = 'us-east-1'
-defaultUrl = 'https://polly.us-east-1.amazonaws.com'
-audioFormat = 'mp3'
-pollyVoice = 'Salli'
+DEFAULT_REGION = 'us-west-2'
+DEFAULT_URL = 'https://polly.us-west-2.amazonaws.com'
+AUDIO_FORMAT = 'mp3'
+POLLY_VOICE = 'Salli'
 
 
-def connectToPolly(regionName=defaultRegion, endpointUrl=defaultUrl):
+def _connect_to_polly(regionName=DEFAULT_REGION, endpointUrl=DEFAULT_URL):
     return boto3.client('polly', region_name=regionName, endpoint_url=endpointUrl)
 
 
-def tts(text, location, format=audioFormat, voice=pollyVoice):
-    polly = connectToPolly()
+def tts(text, file_location, format=AUDIO_FORMAT, voice=POLLY_VOICE):
+    polly = _connect_to_polly()
     resp = polly.synthesize_speech(OutputFormat=format, Text=text, VoiceId=voice)
-    audiofile = open(location, 'wb')
-    soundBytes = resp['AudioStream'].read()
-    audiofile.write(soundBytes)
+    audiofile = open(file_location, 'wb')
+    sound_bytes = resp['AudioStream'].read()
+    audiofile.write(sound_bytes)
     audiofile.close()
